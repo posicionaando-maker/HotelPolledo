@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Hotel Polledo  - Encuesta Servicio</title>
+    <!-- Manifest con ícono SVG + emoji para mejor visual en móvil -->
+    <link rel="manifest" href="data:application/manifest+json,{%22name%22:%22Hotel%20Sem%C3%A1foro%22,%22short_name%22:%22HotelQ%22,%22start_url%22:%22.%22,%22display%22:%22standalone%22,%22theme_color%22:%22%231e2a3a%22,%22background_color%22:%22%23ffffff%22,%22description%22:%22Encuesta%20de%20calidad%20hotelera%20con%20sem%C3%A1foros%22,%22icons%22:[{%22src%22:%22data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%20100%20100%27%3E%3Crect%20width%3D%27100%27%20height%3D%27100%27%20fill%3D%27%231e2a3a%27%2F%3E%3Ctext%20x%3D%2750%25%27%20y%3D%2752%25%27%20dominant-baseline%3D%27middle%27%20text-anchor%3D%27middle%27%20fill%3D%27white%27%20font-size%3D%2760%27%20font-family%3D%27system-ui%27%3E🏨%3C%2Ftext%3E%3C%2Fsvg%3E%22,%22sizes%22:%22100x100%22,%22type%22:%22image%2Fsvg+xml%22}]}">
+    <!-- Chart.js para gráfico de tendencias -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: system-ui, 'Segoe UI', 'Helvetica Neue', sans-serif;
+            background: #f4f4f4;
+            padding: 1rem;
+            max-width: 700px;
+            margin: 0 auto;
+        }
+        .header {
+            background: #1e2a3a;
+            color: white;
+            padding: 1rem;
+            border-radius: 24px 24px 24px 8px;
+            margin-bottom: 1.5rem;
+            text-align: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .header h1 { font-size: 1.6rem; }
+        .header p { font-size: 0.85rem; opacity: 0.8; }
+        .tema-card {
+            background: white;
+            border-radius: 20px;
+            margin-bottom: 1rem;
+            padding: 0.8rem;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+        }
+        .tema-nombre {
+            font-weight: bold;
+            font-size: 1.2rem;
+            margin-bottom: 0.5rem;
+            padding-left: 0.2rem;
+            color: #2c3e4e;
+        }
+        .semaforo-group {
+            display: flex;
+            gap: 1rem;
+            justify-content: space-around;
+            flex-wrap: wrap;
+        }
+        .btn-semaforo {
+            flex: 1;
+            text-align: center;
+            padding: 10px 5px;
+            border-radius: 48px;
+            border: 2px solid #ddd;
+            background: #fafafa;
+            font-weight: bold;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: 0.1s;
+        }
+        .btn-semaforo.verde { background: #e6ffe6; border-color: #2e7d32; color: #1b5e20; }
+        .btn-semaforo.amarillo { background: #fff8e1; border-color: #f9a825; color: #b46f0b; }
+        .btn-semaforo.rojo { background: #ffebee; border-color: #c62828; color: #b71c1c; }
+        .btn-semaforo.active-verde { background: #2e7d32; border-color: #1b5e20; color: white; }
+        .btn-semaforo.active-amarillo { background: #f9a825; border-color: #f57f17; color: white; }
+        .btn-semaforo.active-rojo { background: #c62828; border-color: #b71c1c; color: white; }
+        .exportar-btn {
+            background: #0d47a1;
+            color: white;
+            border: none;
+            width: 100%;
+            padding: 1rem;
+            font-size: 1.3rem;
+            font-weight: bold;
+            border-radius: 60px;
+            margin: 1.5rem 0 1rem;
+            cursor: pointer;
+        }
+        .exportar-btn:active { transform: scale(0.97); background: #0b3b7a; }
+        .status-area {
+            background: #e9ecef;
+            padding: 0.8rem;
+            border-radius: 16px;
+            font-size: 0.85rem;
+            text-align: center;
+            color: #2c3e4e;
+            margin-top: 0.5rem;
+        }
+        /* Panel de Calidad */
+        .panel-calidad {
+            display: none;
+            margin-top: 2rem;
+            background: #2c3e4e;
+            color: white;
+            border-radius: 24px;
+            padding: 1rem;
+        }
+        .panel-calidad.visible { display: block; }
+        .panel-calidad h3 { margin-bottom: 1rem; font-size: 1.2rem; }
+        .grafico-container {
+            background: white;
+            border-radius: 16px;
+            padding: 1rem;
+            margin: 1rem 0;
+        }
+        canvas { max-height: 250px; width: 100%; }
+        .notificacion-item {
+            background: #1e2a3a;
+            border-radius: 16px;
+            padding: 0.8rem;
+            margin-bottom: 0.8rem;
+            font-size: 0.8rem;
+        }
+        .notificacion-item strong { color: #ffd966; }
+        .btn-limpiar {
+            background: #c62828;
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 30px;
+            margin-top: 0.5rem;
+            cursor: pointer;
+        }
+        .tabs {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+        .tab-btn {
+            flex: 1;
+            background: #1e2a3a;
+            color: white;
+            border: none;
+            padding: 0.5rem;
+            border-radius: 30px;
+            cursor: pointer;
+        }
+        .tab-btn.activo {
+            background: #0d47a1;
+        }
+        .tab-contenido {
+            display: none;
+        }
+        .tab-contenido.activo {
+            display: block;
+        }
+        footer {
+            font-size: 0.7rem;
+            text-align: center;
+            margin-top: 1rem;
+            color: #6c757d;
+        }
+        button { user-select: none; touch-action: manipulation; }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <h1>🏨 Encuesta Semáforo</h1>
+    <p>Calidad inmediata · 5 temas · Notifica a Gestión</p>
+</div>
+
+<div id="temas-container"></div>
+
+<button class="exportar-btn" id="exportarBtn">📤 EXPORTAR Y NOTIFICAR</button>
+
+<div class="status-area" id="statusMsg">
+    ✅ Sin evaluaciones aún. Selecciona un estado para cada tema.
+</div>
+
+<!-- PANEL DE CALIDAD (backoffice) -->
+<div id="panelCalidad" class="panel-calidad">
+    <h3>📋 ÁREA DE CALIDAD - Sistema Interno</h3>
+    
+    <div class="tabs">
+        <button class="tab-btn activo" data-tab="tendencias">📈 Tendencias</button>
+        <button class="tab-btn" data-tab="notificaciones">📬 Notificaciones</button>
+    </div>
+    
+    <div id="tabTendencias" class="tab-contenido activo">
+        <div class="grafico-container">
+            <canvas id="graficoTendencias" width="400" height="250"></canvas>
+            <p style="color:#2c3e4e; font-size:0.7rem; margin-top:0.5rem; text-align:center;">
+                📊 Evolución de quejas (rojo), regular (amarillo) y excelente (verde)
+            </p>
+        </div>
+    </div>
+    
+    <div id="tabNotificaciones" class="tab-contenido">
+        <div id="listaNotificaciones">No hay notificaciones aún.</div>
+        <button id="limpiarNotificacionesBtn" class="btn-limpiar">🗑️ Limpiar historial</button>
+    </div>
+    
+    <p style="font-size:0.65rem; margin-top:0.5rem; text-align:center;">🔒 Ctrl+Q: ocultar/mostrar este panel</p>
+</div>
+
+<footer>
+    🏨 PWA con gráfico de tendencias · Datos offline · Ctrl+Q: ver panel Calidad
+</footer>
+
+<script>
+    // ============================================================
+    // 1. DEFINICIÓN DE LOS 5 TEMAS
+    // ============================================================
+    const TEMAS = [
+        { id: 'room_service', nombre: '🍽️ Servicio de habitaciones' },
+        { id: 'limpieza', nombre: '🧹 Limpieza de la habitación' },
+        { id: 'recepcion', nombre: '📞 Atención en recepción' },
+        { id: 'ruidos', nombre: '🔇 Ruidos / Aislamiento' },
+        { id: 'descanso', nombre: '🛏️ Calidad del descanso / colchón' }
+    ];
+
+    const VALORES_SEMAFORO = {
+        'verde': { texto: '🟢 Excelente', codigo: 'VERDE' },
+        'amarillo': { texto: '🟡 Regular', codigo: 'AMARILLO' },
+        'rojo': { texto: '🔴 Malo', codigo: 'ROJO' }
+    };
+
+    let respuestas = {};
+    let db = null;
+    let chartInstance = null; // para el gráfico
+    const DB_NAME = 'HotelSemaforoDB';
+    const DB_VERSION = 1;
+    const STORE_NAME = 'encuestas';
+    const API_STORAGE_KEY = 'hotel_notificaciones_calidad';
+
+    // ============================================================
+    // 2. API SIMULADA CON localStorage
+    // ============================================================
+    function guardarNotificacionEnAPI(notificacion) {
+        let notificaciones = localStorage.getItem(API_STORAGE_KEY);
+        let lista = notificaciones ? JSON.parse(notificaciones) : [];
+        lista.unshift(notificacion);
+        localStorage.setItem(API_STORAGE_KEY, JSON.stringify(lista));
+        console.log('[API] Notificación guardada. Total:', lista.length);
+        return true;
+    }
+
+    function obtenerNotificacionesDesdeAPI() {
+        const data = localStorage.getItem(API_STORAGE_KEY);
+        return data ? JSON.parse(data) : [];
+    }
+
+    function limpiarNotificacionesAPI() {
+        localStorage.removeItem(API_STORAGE_KEY);
+        actualizarPanelCalidad();
+        actualizarGrafico();
+        mostrarMensajeEstado('🗑️ Historial de calidad limpiado');
+    }
+
+    // ============================================================
+    // 3. GRÁFICO DE TENDENCIAS (evolución de quejas)
+    // ============================================================
+    function calcularTendencias() {
+        const notificaciones = obtenerNotificacionesDesdeAPI();
+        // Tomar últimas 10 (o todas si son menos) para el gráfico
+        const ultimas = notificaciones.slice(0, 12).reverse(); // orden cronológico ascendente
+        
+        const labels = [];
+        const datosRojos = [];
+        const datosAmarillos = [];
+        const datosVerdes = [];
+        
+        for (let i = 0; i < ultimas.length; i++) {
+            const n = ultimas[i];
+            const fecha = new Date(n.timestamp);
+            const label = `${fecha.getDate()}/${fecha.getMonth()+1} ${fecha.getHours()}:${fecha.getMinutes()}`;
+            labels.push(label);
+            
+            // Contar cuántos rojos, amarillos y verdes tiene esta encuesta
+            let rojos = 0, amarillos = 0, verdes = 0;
+            for (const [tema, valor] of Object.entries(n.detalle)) {
+                if (valor.includes('🔴')) rojos++;
+                else if (valor.includes('🟡')) amarillos++;
+                else if (valor.includes('🟢')) verdes++;
+            }
+            datosRojos.push(rojos);
+            datosAmarillos.push(amarillos);
+            datosVerdes.push(verdes);
+        }
+        
+        return { labels, datosRojos, datosAmarillos, datosVerdes };
+    }
+    
+    function actualizarGrafico() {
+        const canvas = document.getElementById('graficoTendencias');
+        if (!canvas) return;
+        
+        const ctx = canvas.getContext('2d');
+        const { labels, datosRojos, datosAmarillos, datosVerdes } = calcularTendencias();
+        
+        if (chartInstance) {
+            chartInstance.destroy();
+        }
+        
+        chartInstance = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: '🔴 Quejas (Rojo)',
+                        data: datosRojos,
+                        borderColor: '#c62828',
+                        backgroundColor: 'rgba(198, 40, 40, 0.1)',
+                        tension: 0.2,
+                        fill: true
+                    },
+                    {
+                        label: '🟡 Regular (Amarillo)',
+                        data: datosAmarillos,
+                        borderColor: '#f9a825',
+                        backgroundColor: 'rgba(249, 168, 37, 0.1)',
+                        tension: 0.2,
+                        fill: true
+                    },
+                    {
+                        label: '🟢 Excelente (Verde)',
+                        data: datosVerdes,
+                        borderColor: '#2e7d32',
+                        backgroundColor: 'rgba(46, 125, 50, 0.1)',
+                        tension: 0.2,
+                        fill: true
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: { position: 'top' },
+                    tooltip: { mode: 'index', intersect: false }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: { display: true, text: 'Cantidad de temas', color: '#2c3e4e' }
+                    },
+                    x: {
+                        title: { display: true, text: 'Últimas encuestas (más reciente →)', color: '#2c3e4e' },
+                        ticks: { maxRotation: 45, minRotation: 45 }
+                    }
+                }
+            }
+        });
+    }
+    
+    // ============================================================
+    // 4. ACTUALIZAR PANEL DE CALIDAD (lista + gráfico)
+    // ============================================================
+    function actualizarPanelCalidad() {
+        // Actualizar lista de notificaciones
+        const container = document.getElementById('listaNotificaciones');
+        const notificaciones = obtenerNotificacionesDesdeAPI();
+        
+        if (container) {
+            if (notificaciones.length === 0) {
+                container.innerHTML = '📭 No hay notificaciones aún. Esperando encuestas...';
+            } else {
+                let html = '';
+                for (let i = 0; i < notificaciones.length; i++) {
+                    const n = notificaciones[i];
+                    html += `
+                        <div class="notificacion-item">
+                            <strong>🕒 ${new Date(n.timestamp).toLocaleString()}</strong><br>
+                            🚪 Habitación: ${n.habitacion}<br>
+                            🔴 Rojos: ${n.total_rojos} tema(s)<br>
+                            📊 Detalle:<br>
+                            ${Object.entries(n.detalle).map(([tema,valor]) => `&nbsp;&nbsp;• ${tema}: ${valor}`).join('<br>')}
+                        </div>
+                    `;
+                }
+                container.innerHTML = html;
+            }
+        }
+        
+        // Actualizar gráfico
+        actualizarGrafico();
+    }
+    
+    // ============================================================
+    // 5. INDEXEDDB (persistencia local del huésped)
+    // ============================================================
+    function abrirDB() {
+        return new Promise((resolve, reject) => {
+            const request = indexedDB.open(DB_NAME, DB_VERSION);
+            request.onerror = (e) => reject('Error DB: ' + e.target.error);
+            request.onsuccess = (e) => {
+                db = e.target.result;
+                resolve(db);
+            };
+            request.onupgradeneeded = (e) => {
+                const dbActual = e.target.result;
+                if (!dbActual.objectStoreNames.contains(STORE_NAME)) {
+                    dbActual.createObjectStore(STORE_NAME, { keyPath: 'id', autoIncrement: true });
+                }
+            };
+        });
+    }
+
+    async function guardarEncuestaEnDB(respuestasObj, timestamp) {
+        if (!db) await abrirDB();
+        return new Promise((resolve, reject) => {
+            const transaction = db.transaction([STORE_NAME], 'readwrite');
+            const store = transaction.objectStore(STORE_NAME);
+            store.add({ fecha: timestamp, respuestas: { ...respuestasObj } });
+            transaction.oncomplete = () => resolve(true);
+            transaction.onerror = (e) => reject(e);
+        });
+    }
+    
+    // ============================================================
+    // 6. RENDERIZADO DE INTERFAZ (semáforos)
+    // ============================================================
+    function renderizarTemas() {
+        const container = document.getElementById('temas-container');
+        if (!container) return;
+        container.innerHTML = '';
+        for (let tema of TEMAS) {
+            const valorActual = respuestas[tema.id] || null;
+            const card = document.createElement('div');
+            card.className = 'tema-card';
+            
+            const titulo = document.createElement('div');
+            titulo.className = 'tema-nombre';
+            titulo.innerText = tema.nombre;
+            card.appendChild(titulo);
+            
+            const grupo = document.createElement('div');
+            grupo.className = 'semaforo-group';
+            
+            const btnVerde = crearBotonSemaforo('verde', '🟢 Excelente', valorActual === 'verde');
+            btnVerde.addEventListener('click', () => {
+                respuestas[tema.id] = 'verde';
+                renderizarTemas();
+                mostrarMensajeEstado('📝 Excelente en ' + tema.nombre);
+            });
+            
+            const btnAmarillo = crearBotonSemaforo('amarillo', '🟡 Regular', valorActual === 'amarillo');
+            btnAmarillo.addEventListener('click', () => {
+                respuestas[tema.id] = 'amarillo';
+                renderizarTemas();
+                mostrarMensajeEstado('📝 Regular en ' + tema.nombre);
+            });
+            
+            const btnRojo = crearBotonSemaforo('rojo', '🔴 Malo', valorActual === 'rojo');
+            btnRojo.addEventListener('click', () => {
+                respuestas[tema.id] = 'rojo';
+                renderizarTemas();
+                mostrarMensajeEstado('⚠️ Malo en ' + tema.nombre);
+            });
+            
+            grupo.appendChild(btnVerde);
+            grupo.appendChild(btnAmarillo);
+            grupo.appendChild(btnRojo);
+            card.appendChild(grupo);
+            container.appendChild(card);
+        }
+    }
+    
+    function crearBotonSemaforo(tipo, texto, isActive) {
+        const btn = document.createElement('button');
+        btn.innerText = texto;
+        btn.className = 'btn-semaforo';
+        btn.classList.add(tipo);
+        if (isActive) btn.classList.add(`active-${tipo}`);
+        return btn;
+    }
+    
+    function mostrarMensajeEstado(msg) {
+        const statusDiv = document.getElementById('statusMsg');
+        if (statusDiv) statusDiv.innerHTML = `🔔 ${msg}`;
+        setTimeout(() => {
+            if (statusDiv && !statusDiv.innerHTML.includes('Exportada')) {
+                // dejar mensaje
+            }
+        }, 2500);
+    }
+    
+    // ============================================================
+    // 7. EXPORTAR + NOTIFICAR A CALIDAD
+    // ============================================================
+    async function exportarYNotificar() {
+        const temasSinResponder = TEMAS.filter(t => !respuestas[t.id]);
+        if (temasSinResponder.length > 0) {
+            const nombresFaltantes = temasSinResponder.map(t => t.nombre).join(', ');
+            mostrarMensajeEstado(`❌ Faltan: ${nombresFaltantes}`);
+            return;
+        }
+        
+        const resultados = {};
+        for (let tema of TEMAS) {
+            const valor = respuestas[tema.id];
+            resultados[tema.nombre] = VALORES_SEMAFORO[valor].texto;
+        }
+        
+        const timestamp = new Date().toISOString();
+        const totalRojos = Object.values(resultados).filter(v => v.includes('🔴')).length;
+        const numeroHabitacion = '🏨 H-' + Math.floor(Math.random() * 500) + 100;
+        
+        const notificacion = {
+            timestamp: timestamp,
+            habitacion: numeroHabitacion,
+            total_rojos: totalRojos,
+            detalle: resultados
+        };
+        
+        await guardarEncuestaEnDB(respuestas, timestamp);
+        guardarNotificacionEnAPI(notificacion);
+        actualizarPanelCalidad();
+        
+        mostrarMensajeEstado(`✅ Exportado. Calidad notificada. Rojos: ${totalRojos}`);
+        alert(`📨 NOTIFICACIÓN ENVIADA AL ÁREA DE CALIDAD\n\nHabitación: ${numeroHabitacion}\nRojos: ${totalRojos}\n\nEl gráfico de tendencias se ha actualizado.`);
+    }
+    
+    // ============================================================
+    // 8. PANEL DE CALIDAD (Ctrl+Q) y tabs
+    // ============================================================
+    function togglePanelCalidad() {
+        const panel = document.getElementById('panelCalidad');
+        panel.classList.toggle('visible');
+        if (panel.classList.contains('visible')) {
+            actualizarPanelCalidad();
+        }
+    }
+    
+    function initTabs() {
+        const tabs = document.querySelectorAll('.tab-btn');
+        tabs.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const tabId = btn.getAttribute('data-tab');
+                // Cambiar clase activa en botones
+                tabs.forEach(b => b.classList.remove('activo'));
+                btn.classList.add('activo');
+                // Cambiar contenido visible
+                document.querySelectorAll('.tab-contenido').forEach(tab => {
+                    tab.classList.remove('activo');
+                });
+                if (tabId === 'tendencias') {
+                    document.getElementById('tabTendencias').classList.add('activo');
+                    actualizarGrafico(); // redibujar por si acaso
+                } else if (tabId === 'notificaciones') {
+                    document.getElementById('tabNotificaciones').classList.add('activo');
+                }
+            });
+        });
+    }
+    
+    // ============================================================
+    // 9. INICIALIZACIÓN
+    // ============================================================
+    async function init() {
+        await abrirDB();
+        respuestas = {};
+        renderizarTemas();
+        
+        document.getElementById('exportarBtn').addEventListener('click', exportarYNotificar);
+        document.getElementById('limpiarNotificacionesBtn').addEventListener('click', limpiarNotificacionesAPI);
+        
+        document.addEventListener('keydown', (e) => {
+            if (e.ctrlKey && e.key === 'q') {
+                e.preventDefault();
+                togglePanelCalidad();
+            }
+        });
+        
+        initTabs();
+        actualizarPanelCalidad(); // carga datos iniciales si existen
+        
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('./sw.js').catch(err => {
+                console.warn('SW no registrado (para offline total sirve con http-server)', err);
+            });
+        }
+    }
+    
+    init();
+</script>
+</body>
+</html>
